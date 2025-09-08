@@ -6,10 +6,10 @@ services:
     container_name: orderation-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: rootpass
-      MYSQL_DATABASE: orderation
-      MYSQL_USER: app
-      MYSQL_PASSWORD: appl3pass
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-orderation}
+      MYSQL_USER: ${MYSQL_USER:-app}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-appl3pass}
     ports:
       - "3306:3306"
     volumes:
@@ -27,16 +27,15 @@ services:
       db:
         condition: service_healthy
     environment:
-      # Example DSN: user:pass@tcp(host:3306)/dbname?parseTime=true
-      MYSQL_DSN: "app:appl3pass@tcp(db:3306)/orderation?parseTime=true&charset=utf8mb4&collation=utf8mb4_unicode_ci"
-      SECRET: "change-me-in-prod"
-      ADMIN_EMAIL: "admin@demo.local"
-      ADMIN_PASSWORD: "admin123"
-      ADDR: ":8080"
+      # Use .env to override these values
+      MYSQL_DSN: ${MYSQL_DSN:-app:appl3pass@tcp(db:3306)/orderation?parseTime=true&charset=utf8mb4&collation=utf8mb4_unicode_ci}
+      SECRET: ${SECRET:-change-me-in-prod}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@demo.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      ADDR: ${ADDR:-:8080}
     ports:
       - "8080:8080"
     restart: unless-stopped
 
 volumes:
   db_data:
-

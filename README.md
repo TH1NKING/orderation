@@ -28,11 +28,13 @@ go run ./cmd/server
 启动：
 
 ```bash
+cp .env.example .env   # 可选：创建并修改你的环境变量
 docker compose up -d --build
 # 等待 db 健康检查通过后，app 将自动启动，默认 http://localhost:8080
 ```
 
-环境变量（compose 已内置，可按需修改）：
+环境变量（.env 自动加载，可按需修改）：
+- `MYSQL_ROOT_PASSWORD`、`MYSQL_DATABASE`、`MYSQL_USER`、`MYSQL_PASSWORD`
 - `MYSQL_DSN`: `app:appl3pass@tcp(db:3306)/orderation?parseTime=true&charset=utf8mb4&collation=utf8mb4_unicode_ci`
 - `SECRET`: 示例值 `change-me-in-prod`（生产请修改）
 - `ADMIN_EMAIL`/`ADMIN_PASSWORD`: 首次启动自动创建管理员
@@ -64,6 +66,8 @@ go run ./cmd/server
 DSN 速查：
 - 在容器内连接 compose 中的 MySQL：`app:appl3pass@tcp(db:3306)/orderation?parseTime=true&charset=utf8mb4&collation=utf8mb4_unicode_ci`
 - 在宿主机连接 compose 中的 MySQL：`app:appl3pass@tcp(127.0.0.1:3306)/orderation?parseTime=true&charset=utf8mb4&collation=utf8mb4_unicode_ci`
+
+提示：Docker Compose 会自动从 `docker-compose.yml` 同目录下加载 `.env` 文件用于变量替换；本仓库提供 `.env.example`，可复制为 `.env` 并按需修改。
 
 ## 目录结构
 
