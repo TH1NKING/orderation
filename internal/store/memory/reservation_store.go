@@ -90,11 +90,6 @@ func (s *ReservationStore) ListOverlap(f store.ReservationFilter) ([]*models.Res
             continue
         }
         // overlap if (r.Start < f.EndAfter) && (r.End > f.StartBefore)
-        if r.StartTime.Before(f.StartBefore) && !r.EndTime.After(f.EndAfter) {
-            // fully inside window; still overlap
-            out = append(out, r)
-            continue
-        }
         if r.StartTime.Before(f.EndAfter) && r.EndTime.After(f.StartBefore) {
             out = append(out, r)
             continue
@@ -103,4 +98,3 @@ func (s *ReservationStore) ListOverlap(f store.ReservationFilter) ([]*models.Res
     sort.Slice(out, func(i, j int) bool { return out[i].StartTime.Before(out[j].StartTime) })
     return out, nil
 }
-

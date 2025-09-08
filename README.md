@@ -17,6 +17,53 @@ go run ./cmd/server
 - `ADDR`：监听地址，默认 `:8080`
 - `SECRET`：签名密钥（HMAC），默认随机生成（重启后 token 失效）
 - `ADMIN_EMAIL`、`ADMIN_PASSWORD`、`ADMIN_NAME`：启动时自动创建管理员账号（可选）
+- `MYSQL_DSN`：若设置则启用 MySQL 存储（例如：`app:appl3pass@tcp(127.0.0.1:3306)/orderation?parseTime=true&charset=utf8mb4&collation=utf8mb4_unicode_ci`），未设置则使用内存存储
+
+### 使用 Docker 一键部署（含 MySQL）
+
+已提供 `Dockerfile` 与 `docker-compose.yml`，包含：
+- `mysql:8.0` 数据库（持久化到 `db_data` 卷）
+- 应用容器（启动时自动创建表，无需手动迁移）
+
+启动：
+
+```bash
+docker compose up -d --build
+# 等待 db 健康检查通过后，app 将自动启动，默认 http://localhost:8080
+```
+
+环境变量（compose 已内置，可按需修改）：
+- `MYSQL_DSN`: `app:appl3pass@tcp(db:3306)/orderation?parseTime=true&charset=utf8mb4&collation=utf8mb4_unicode_ci`
+- `SECRET`: 示例值 `change-me-in-prod`（生产请修改）
+- `ADMIN_EMAIL`/`ADMIN_PASSWORD`: 首次启动自动创建管理员
+
+停止并清理：
+
+```bash
+docker compose down
+# 如需删除数据卷：
+docker compose down -v
+```
+
+### 本地开发（连接 MySQL）
+
+你可以只运行数据库容器，本地 `go run` 应用：
+
+```bash
+# 启动 MySQL（后台）
+docker compose up -d db
+
+# 设置 DSN 并运行应用（连接到宿主机上的 MySQL）
+export MYSQL_DSN="app:appl3pass@tcp(127.0.0.1:3306)/orderation?parseTime=true&charset=utf8mb4&collation=utf8mb4_unicode_ci"
+export SECRET="dev-secret" # 本地开发示例
+export ADMIN_EMAIL="admin@demo.local"
+export ADMIN_PASSWORD="admin123"
+go run ./cmd/server
+```
+
+DSN 速查：
+- 在容器内连接 compose 中的 MySQL：`app:appl3pass@tcp(db:3306)/orderation?parseTime=true&charset=utf8mb4&collation=utf8mb4_unicode_ci`
+- 在宿主机连接 compose 中的 MySQL：`app:appl3pass@tcp(127.0.0.1:3306)/orderation?parseTime=true&charset=utf8mb4&collation=utf8mb4_unicode_ci`
 
 ## 目录结构
 
@@ -28,6 +75,7 @@ go run ./cmd/server
 - `internal/models`：模型定义
 - `internal/store`：存储接口
 - `internal/store/memory`：内存存储实现
+- `internal/store/mysql`：MySQL 存储实现与自动建表
 - `internal/auth`：密码哈希与 Token
 
 ## API 概览
@@ -72,6 +120,59 @@ go run ./cmd/server
     - 响应：`{ "status":"cancelled" }`
   - GET `/api/v1/me/reservations`（需登录） → `Reservation[]`
 
+## API 示例（curl）
+
+以下命令可在 Docker 启动后直接在终端执行：
+
+```bash
+BASE=http://localhost:8080
+
+# 1) 管理员登录（使用 compose 中的环境变量）
+ADMIN_TOKEN=$(curl -s -X POST "$BASE/api/v1/auth/login" \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"admin@demo.local","password":"admin123"}' | jq -r .token)
+echo "ADMIN_TOKEN=$ADMIN_TOKEN"
+
+# 2) 创建餐厅（需要管理员）
+REST=$(curl -s -X POST "$BASE/api/v1/restaurants" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" -H 'Content-Type: application/json' \
+  -d '{"name":"示例餐厅","address":"地址","openTime":"10:00","closeTime":"22:00"}')
+REST_ID=$(echo "$REST" | jq -r .id)
+echo "REST_ID=$REST_ID"
+
+# 3) 创建餐桌（需要管理员）
+TBL=$(curl -s -X POST "$BASE/api/v1/restaurants/$REST_ID/tables" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" -H 'Content-Type: application/json' \
+  -d '{"name":"A1","capacity":4}')
+TABLE_ID=$(echo "$TBL" | jq -r .id)
+echo "TABLE_ID=$TABLE_ID"
+
+# 4) 注册普通用户
+REG=$(curl -s -X POST "$BASE/api/v1/auth/register" -H 'Content-Type: application/json' \
+  -d '{"name":"张三","email":"u@test.local","password":"p"}')
+USER_TOKEN=$(echo "$REG" | jq -r .token)
+echo "USER_TOKEN=$USER_TOKEN"
+
+# 5) 查询余位（时间示例：2 小时后到 4 小时后）
+START=$(date -u -v+2H +"%Y-%m-%dT%H:00:00Z" 2>/dev/null || date -u -d "+2 hours" +"%Y-%m-%dT%H:00:00Z")
+END=$(date -u -v+4H +"%Y-%m-%dT%H:00:00Z" 2>/dev/null || date -u -d "+4 hours" +"%Y-%m-%dT%H:00:00Z")
+curl -s -X POST "$BASE/api/v1/restaurants/$REST_ID/availability" -H 'Content-Type: application/json' \
+  -d "{\"start\":\"$START\",\"end\":\"$END\",\"guests\":2}"
+
+# 6) 创建预订（指定餐桌）
+RES=$(curl -s -X POST "$BASE/api/v1/restaurants/$REST_ID/reservations" \
+  -H "Authorization: Bearer $USER_TOKEN" -H 'Content-Type: application/json' \
+  -d "{\"start\":\"$START\",\"end\":\"$END\",\"guests\":2,\"tableId\":\"$TABLE_ID\"}")
+RES_ID=$(echo "$RES" | jq -r .id)
+echo "RES_ID=$RES_ID"
+
+# 7) 查看我的预订
+curl -s -H "Authorization: Bearer $USER_TOKEN" "$BASE/api/v1/me/reservations" | jq .
+
+# 8) 取消预订
+curl -s -X DELETE -H "Authorization: Bearer $USER_TOKEN" "$BASE/api/v1/reservations/$RES_ID" | jq .
+```
+
 ### 数据模型（简化）
 
 - `User`：`{ id, name, email, role, createdAt }`
@@ -90,6 +191,12 @@ go run ./cmd/server
   - 复杂营业时间与跨天预订、合桌/并桌策略、超时释放等。
   - 预订修改、订单/支付、通知（短信/邮件）。
   - 分页与筛选、审计日志、限流与安全审计。
+
+## 常见问题
+
+- 端口占用：修改 `ADDR` 或关闭占用该端口的进程。
+- MySQL 连接失败：确认 `MYSQL_DSN` 正确、数据库已就绪（compose 启动有健康检查）。
+- Token 失效：未设置 `SECRET` 时会使用随机密钥，重启后历史 token 失效；生产务必显式设置。
 
 ## 快速测试顺序（示例）
 

@@ -11,3 +11,5 @@ func newID() string {
     return hex.EncodeToString(b)
 }
 
+// NewIDForExternal exposes ID generation for other stores.
+func NewIDForExternal() string { return newID() }

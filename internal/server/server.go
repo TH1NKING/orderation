@@ -1,15 +1,19 @@
 package server
 
 import (
+    "context"
     "log"
     "net/http"
     "os"
+    "time"
 
     "orderation/internal/auth"
+    "orderation/internal/store"
+    mysqlstore "orderation/internal/store/mysql"
+    memorystore "orderation/internal/store/memory"
     h "orderation/internal/web/handlers"
     "orderation/internal/web/middleware"
     "orderation/internal/web/router"
-    "orderation/internal/store/memory"
 )
 
 type Server struct {
@@ -19,11 +23,34 @@ type Server struct {
 func New() *Server {
     mux := http.NewServeMux()
 
-    // Stores (in-memory implementation)
-    userStore := memory.NewUserStore()
-    restaurantStore := memory.NewRestaurantStore()
-    tableStore := memory.NewTableStore()
-    reservationStore := memory.NewReservationStore()
+    // Stores: prefer MySQL when MYSQL_DSN is set; otherwise memory
+    var userStore store.UserStore
+    var restaurantStore store.RestaurantStore
+    var tableStore store.TableStore
+    var reservationStore store.ReservationStore
+
+    if dsn := os.Getenv("MYSQL_DSN"); dsn != "" {
+        db, err := mysqlstore.Open(dsn)
+        if err != nil {
+            log.Fatalf("mysql open: %v", err)
+        }
+        ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+        defer cancel()
+        if err := mysqlstore.EnsureSchema(ctx, db); err != nil {
+            log.Fatalf("mysql schema: %v", err)
+        }
+        userStore = mysqlstore.NewUserStore(db)
+        restaurantStore = mysqlstore.NewRestaurantStore(db)
+        tableStore = mysqlstore.NewTableStore(db)
+        reservationStore = mysqlstore.NewReservationStore(db)
+        log.Println("[info] using MySQL store")
+    } else {
+        userStore = memorystore.NewUserStore()
+        restaurantStore = memorystore.NewRestaurantStore()
+        tableStore = memorystore.NewTableStore()
+        reservationStore = memorystore.NewReservationStore()
+        log.Println("[info] using in-memory store")
+    }
 
     // Auth setup
     secret := os.Getenv("SECRET")
