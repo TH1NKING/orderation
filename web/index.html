@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Orderation Demo Frontend</title>
+  <style>
+    body { font-family: sans-serif; }
+    section { margin-bottom: 2rem; }
+    pre { background: #f0f0f0; padding: 0.5rem; }
+  </style>
+</head>
+<body>
+  <h1>Orderation Demo Frontend</h1>
+
+  <section>
+    <h2>Register</h2>
+    <form id="register-form">
+      <input name="name" placeholder="Name" required />
+      <input name="email" type="email" placeholder="Email" required />
+      <input name="password" type="password" placeholder="Password" required />
+      <button type="submit">Register</button>
+    </form>
+    <pre id="register-result"></pre>
+  </section>
+
+  <section>
+    <h2>Login</h2>
+    <form id="login-form">
+      <input name="email" type="email" placeholder="Email" required />
+      <input name="password" type="password" placeholder="Password" required />
+      <button type="submit">Login</button>
+    </form>
+    <pre id="login-result"></pre>
+  </section>
+
+  <section id="app" style="display:none;">
+    <h2>Restaurants</h2>
+    <button id="load-restaurants">Load Restaurants</button>
+    <ul id="restaurants"></ul>
+
+    <h3>My Reservations</h3>
+    <button id="load-reservations">Load My Reservations</button>
+    <ul id="reservations"></ul>
+
+    <h3>Create Reservation</h3>
+    <form id="reserve-form">
+      <input name="restaurantId" placeholder="Restaurant ID" required />
+      <input name="start" type="datetime-local" required />
+      <input name="end" type="datetime-local" required />
+      <input name="guests" type="number" min="1" value="1" required />
+      <input name="tableId" placeholder="Table ID (optional)" />
+      <button type="submit">Reserve</button>
+    </form>
+    <pre id="reserve-result"></pre>
+  </section>
+
+  <script src="main.js"></script>
+</body>
+</html>
