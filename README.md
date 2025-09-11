@@ -214,3 +214,21 @@ ADMIN_EMAIL=admin@demo.com ADMIN_PASSWORD=admin go run ./cmd/server
 5) 查询余位并下单
 6) 查看/取消我的预订
 ```
+
+## 简易前端示例
+
+仓库的 `web/` 目录提供了一个零构建的静态页面，使用浏览器原生 `fetch` 调用后端接口，可用于快速体验。
+
+### 使用方式
+1. 启动后端服务：
+   ```bash
+   go run ./cmd/server
+   ```
+2. 在另一个终端启动静态文件服务器：
+   ```bash
+   cd web
+   python3 -m http.server 8081
+   ```
+3. 打开浏览器访问 [http://localhost:8081](http://localhost:8081) 进行注册、登录、查看餐厅和创建预订。
+
+> 注意：示例前端直接调用 `http://localhost:8080`，若端口或地址不同请修改 `web/main.js` 中的 `apiBase`；若跨域访问失败，可在后端添加 CORS 处理。
