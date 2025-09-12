@@ -43,3 +43,18 @@ func (s *RestaurantStore) ByID(id string) (*models.Restaurant, error) {
     return &r, nil
 }
 
+func (s *RestaurantStore) Delete(id string) error {
+    result, err := s.db.Exec(`DELETE FROM restaurants WHERE id=?`, id)
+    if err != nil {
+        return err
+    }
+    rowsAffected, err := result.RowsAffected()
+    if err != nil {
+        return err
+    }
+    if rowsAffected == 0 {
+        return errors.New("restaurant not found")
+    }
+    return nil
+}
+

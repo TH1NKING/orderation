@@ -4,6 +4,8 @@ import (
     "encoding/json"
     "net/http"
     "sort"
+    "strconv"
+    "strings"
     "time"
 
     "orderation/internal/models"
@@ -70,6 +72,133 @@ func (h *ReservationHandler) Availability(w http.ResponseWriter, r *http.Request
     writeJSON(w, http.StatusOK, available)
 }
 
+// isWithinOperatingHours checks if the reservation time is within restaurant operating hours
+func (h *ReservationHandler) isWithinOperatingHours(restaurant *models.Restaurant, start, end time.Time) bool {
+    // Parse operating hours (format: "09:00")
+    openHour, openMin, err := parseTime(restaurant.OpenTime)
+    if err != nil {
+        return false
+    }
+    closeHour, closeMin, err := parseTime(restaurant.CloseTime)
+    if err != nil {
+        return false
+    }
+    
+    // Convert UTC times to local time (assuming restaurant operates in Asia/Shanghai timezone)
+    loc, err := time.LoadLocation("Asia/Shanghai")
+    if err != nil {
+        // Fallback to UTC+8 if timezone loading fails
+        loc = time.FixedZone("CST", 8*3600)
+    }
+    
+    localStart := start.In(loc)
+    localEnd := end.In(loc)
+    
+    // Get the date and time components in local time
+    startDate := localStart.Truncate(24 * time.Hour)
+    endDate := localEnd.Truncate(24 * time.Hour)
+    
+    // Check each day of the reservation in local time
+    for date := startDate; !date.After(endDate); date = date.Add(24 * time.Hour) {
+        // Create operating hours for this specific date in the local timezone
+        openTime := time.Date(date.Year(), date.Month(), date.Day(), openHour, openMin, 0, 0, loc)
+        closeTime := time.Date(date.Year(), date.Month(), date.Day(), closeHour, closeMin, 0, 0, loc)
+        
+        // Handle overnight hours (e.g., 22:00 - 02:00)
+        if closeTime.Before(openTime) {
+            closeTime = closeTime.Add(24 * time.Hour)
+        }
+        
+        // Check if reservation overlaps with this day's operating hours
+        dayStart := localStart
+        if localStart.Before(date) {
+            dayStart = date
+        }
+        dayEnd := localEnd
+        if localEnd.After(date.Add(24*time.Hour)) {
+            dayEnd = date.Add(24 * time.Hour)
+        }
+        
+        // If there's any part of the reservation on this day
+        if dayStart.Before(dayEnd) {
+            // Check if this part is within operating hours
+            if dayStart.Before(openTime) || dayEnd.After(closeTime) {
+                return false // Any part outside operating hours means rejection
+            }
+        }
+    }
+    
+    return true
+}
+
+// findBestAvailableTable finds the most suitable available table using smart allocation
+func (h *ReservationHandler) findBestAvailableTable(restaurantID string, start, end time.Time, guests int) *models.Table {
+    tables, err := h.tables.ListByRestaurant(restaurantID)
+    if err != nil {
+        return nil
+    }
+    
+    var availableTables []*models.Table
+    
+    // First, find all available tables that can accommodate the guests
+    for _, t := range tables {
+        if t.Capacity < guests {
+            continue
+        }
+        
+        overlaps, _ := h.reservations.ListOverlap(store.ReservationFilter{
+            RestaurantID: restaurantID,
+            TableID:      t.ID,
+            StartBefore:  start,
+            EndAfter:     end,
+        })
+        
+        if len(overlaps) == 0 {
+            availableTables = append(availableTables, t)
+        }
+    }
+    
+    if len(availableTables) == 0 {
+        return nil
+    }
+    
+    // Smart allocation strategy:
+    // 1. Prefer tables with capacity closest to guest count (minimize waste)
+    // 2. If multiple tables have same capacity, choose randomly
+    sort.Slice(availableTables, func(i, j int) bool {
+        // Sort by capacity difference from guest count (ascending)
+        diffI := availableTables[i].Capacity - guests
+        diffJ := availableTables[j].Capacity - guests
+        if diffI != diffJ {
+            return diffI < diffJ
+        }
+        // If same difference, sort by table ID for deterministic behavior
+        return availableTables[i].ID < availableTables[j].ID
+    })
+    
+    return availableTables[0]
+}
+
+// parseTime parses time string in "HH:MM" format
+func parseTime(timeStr string) (hour, minute int, err error) {
+    parts := strings.Split(timeStr, ":")
+    if len(parts) != 2 {
+        return 0, 0, err
+    }
+    
+    hour, err = strconv.Atoi(parts[0])
+    if err != nil {
+        return 0, 0, err
+    }
+    
+    minute, err = strconv.Atoi(parts[1])
+    if err != nil {
+        return 0, 0, err
+    }
+    
+    return hour, minute, nil
+}
+
 type createReservationReq struct {
     Start  time.Time `json:"start"`
     End    time.Time `json:"end"`
@@ -79,7 +208,8 @@ type createReservationReq struct {
 
 func (h *ReservationHandler) Create(w http.ResponseWriter, r *http.Request) {
     rid := router.Param(r, "id")
-    if _, err := h.restaurants.ByID(rid); err != nil {
+    restaurant, err := h.restaurants.ByID(rid)
+    if err != nil {
         notFound(w, "restaurant not found")
         return
     }
@@ -92,6 +222,12 @@ func (h *ReservationHandler) Create(w http.ResponseWriter, r *http.Request) {
         badRequest(w, "invalid time range or guests")
         return
     }
+    
+    // Check if reservation time is within restaurant operating hours
+    if !h.isWithinOperatingHours(restaurant, req.Start, req.End) {
+        badRequest(w, "reservation time is outside restaurant operating hours")
+        return
+    }
     // pick table if not provided
     var table *models.Table
     if req.Table != "" {
@@ -102,18 +238,8 @@ func (h *ReservationHandler) Create(w http.ResponseWriter, r *http.Request) {
         }
         table = t
     } else {
-        tables, _ := h.tables.ListByRestaurant(rid)
-        sort.Slice(tables, func(i, j int) bool { return tables[i].Capacity < tables[j].Capacity })
-        for _, t := range tables {
-            if t.Capacity < req.Guests {
-                continue
-            }
-            overlaps, _ := h.reservations.ListOverlap(store.ReservationFilter{RestaurantID: rid, TableID: t.ID, StartBefore: req.Start, EndAfter: req.End})
-            if len(overlaps) == 0 {
-                table = t
-                break
-            }
-        }
+        // Smart table allocation: find the best available table
+        table = h.findBestAvailableTable(rid, req.Start, req.End, req.Guests)
         if table == nil {
             badRequest(w, "no available table for the requested time")
             return

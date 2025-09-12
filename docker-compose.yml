@@ -27,8 +27,16 @@ services:
       db:
         condition: service_healthy
     environment:
-      # Use .env to override these values
-      MYSQL_DSN: ${MYSQL_DSN:-app:appl3pass@tcp(db:3306)/orderation?parseTime=true&charset=utf8mb4&collation=utf8mb4_unicode_ci}
+      # Database configuration - will use individual components to connect to db service
+      MYSQL_HOST: ${MYSQL_HOST:-db}
+      MYSQL_PORT: ${MYSQL_PORT:-3306}
+      MYSQL_USER: ${MYSQL_USER:-app}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-appl3pass}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-orderation}
+      MYSQL_PARAMS: ${MYSQL_PARAMS:-parseTime=true&charset=utf8mb4&collation=utf8mb4_unicode_ci}
+      # Alternative: use complete DSN (overrides individual components if set)
+      MYSQL_DSN: ${MYSQL_DSN:-}
+      # Application configuration
       SECRET: ${SECRET:-change-me-in-prod}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@demo.local}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}

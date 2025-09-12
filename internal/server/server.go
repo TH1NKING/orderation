@@ -23,33 +23,34 @@ type Server struct {
 func New() *Server {
     mux := http.NewServeMux()
 
-    // Stores: prefer MySQL when MYSQL_DSN is set; otherwise memory
+    // Stores: check for database configuration
     var userStore store.UserStore
     var restaurantStore store.RestaurantStore
     var tableStore store.TableStore
     var reservationStore store.ReservationStore
 
-    if dsn := os.Getenv("MYSQL_DSN"); dsn != "" {
-        db, err := mysqlstore.Open(dsn)
+    // Try to initialize MySQL connection based on available configuration
+    config := mysqlstore.NewConfigFromEnv()
+    if shouldUseMySQL(config) {
+        db, err := mysqlstore.OpenWithConfig(config)
         if err != nil {
-            log.Fatalf("mysql open: %v", err)
+            log.Printf("[warn] failed to connect to MySQL (%s:%d): %v", config.Host, config.Port, err)
+            log.Println("[info] falling back to in-memory store")
+            initMemoryStores(&userStore, &restaurantStore, &tableStore, &reservationStore)
+        } else {
+            ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+            defer cancel()
+            if err := mysqlstore.EnsureSchema(ctx, db); err != nil {
+                log.Fatalf("mysql schema: %v", err)
+            }
+            userStore = mysqlstore.NewUserStore(db)
+            restaurantStore = mysqlstore.NewRestaurantStore(db)
+            tableStore = mysqlstore.NewTableStore(db)
+            reservationStore = mysqlstore.NewReservationStore(db)
+            log.Printf("[info] using MySQL store (%s:%d)", config.Host, config.Port)
         }
-        ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-        defer cancel()
-        if err := mysqlstore.EnsureSchema(ctx, db); err != nil {
-            log.Fatalf("mysql schema: %v", err)
-        }
-        userStore = mysqlstore.NewUserStore(db)
-        restaurantStore = mysqlstore.NewRestaurantStore(db)
-        tableStore = mysqlstore.NewTableStore(db)
-        reservationStore = mysqlstore.NewReservationStore(db)
-        log.Println("[info] using MySQL store")
     } else {
-        userStore = memorystore.NewUserStore()
-        restaurantStore = memorystore.NewRestaurantStore()
-        tableStore = memorystore.NewTableStore()
-        reservationStore = memorystore.NewReservationStore()
-        log.Println("[info] using in-memory store")
+        initMemoryStores(&userStore, &restaurantStore, &tableStore, &reservationStore)
     }
 
     // Auth setup
@@ -67,7 +68,7 @@ func New() *Server {
 
     // Handlers
     ah := h.NewAuthHandler(userStore, pass, token)
-    rh := h.NewRestaurantHandler(restaurantStore)
+    rh := h.NewRestaurantHandler(restaurantStore, tableStore, reservationStore)
     th := h.NewTableHandler(restaurantStore, tableStore)
     resvh := h.NewReservationHandler(reservationStore, restaurantStore, tableStore, userStore)
 
@@ -87,7 +88,9 @@ func New() *Server {
     // Restaurants
     r.Handle("GET", "/api/v1/restaurants", http.HandlerFunc(rh.List))
     r.Handle("GET", "/api/v1/restaurants/:id", http.HandlerFunc(rh.GetByID))
+    r.Handle("GET", "/api/v1/restaurants/:id/details", http.HandlerFunc(rh.GetDetails))
     r.Handle("POST", "/api/v1/restaurants", middleware.RequireRole(token, "admin", http.HandlerFunc(rh.Create)))
+    r.Handle("DELETE", "/api/v1/restaurants/:id", middleware.RequireRole(token, "admin", http.HandlerFunc(rh.Delete)))
 
     // Tables
     r.Handle("GET", "/api/v1/restaurants/:id/tables", http.HandlerFunc(th.ListByRestaurant))
@@ -103,3 +106,26 @@ func New() *Server {
 }
 
 func (s *Server) Handler() http.Handler { return s.mux }
+
+func shouldUseMySQL(config *mysqlstore.Config) bool {
+    if os.Getenv("MYSQL_DSN") != "" {
+        return true
+    }
+    
+    if os.Getenv("MYSQL_HOST") != "" || 
+       os.Getenv("MYSQL_USER") != "" || 
+       os.Getenv("MYSQL_PASSWORD") != "" {
+        return true
+    }
+    
+    return false
+}
+
+func initMemoryStores(userStore *store.UserStore, restaurantStore *store.RestaurantStore, 
+                     tableStore *store.TableStore, reservationStore *store.ReservationStore) {
+    *userStore = memorystore.NewUserStore()
+    *restaurantStore = memorystore.NewRestaurantStore()
+    *tableStore = memorystore.NewTableStore()
+    *reservationStore = memorystore.NewReservationStore()
+    log.Println("[info] using in-memory store")
+}

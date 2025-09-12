@@ -50,3 +50,13 @@ func (s *RestaurantStore) ByID(id string) (*models.Restaurant, error) {
     return r, nil
 }
 
+func (s *RestaurantStore) Delete(id string) error {
+    s.mu.Lock()
+    defer s.mu.Unlock()
+    if s.byID[id] == nil {
+        return errors.New("restaurant not found")
+    }
+    delete(s.byID, id)
+    return nil
+}
+

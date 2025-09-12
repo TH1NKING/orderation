@@ -48,6 +48,10 @@ func (s *ReservationStore) ListByUser(userID string) ([]*models.Reservation, err
         if err := rows.Scan(&r.ID,&r.RestaurantID,&r.TableID,&r.UserID,&r.StartTime,&r.EndTime,&r.Guests,&r.Status,&r.CreatedAt); err != nil { return nil, err }
         out = append(out, &r)
     }
+    // Ensure we always return a slice, not nil
+    if out == nil {
+        out = []*models.Reservation{}
+    }
     return out, nil
 }
 

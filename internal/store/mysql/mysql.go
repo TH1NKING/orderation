@@ -3,14 +3,117 @@ package mysql
 import (
     "context"
     "database/sql"
+    "fmt"
+    "os"
+    "strconv"
+    "strings"
     _ "github.com/go-sql-driver/mysql"
 )
+
+type Config struct {
+    Host     string
+    Port     int
+    Username string
+    Password string
+    Database string
+    Params   string
+}
+
+func NewConfigFromEnv() *Config {
+    if dsn := os.Getenv("MYSQL_DSN"); dsn != "" {
+        return parseFromDSN(dsn)
+    }
+
+    host := getEnvOrDefault("MYSQL_HOST", "localhost")
+    port, _ := strconv.Atoi(getEnvOrDefault("MYSQL_PORT", "3306"))
+    username := getEnvOrDefault("MYSQL_USER", "root")
+    password := getEnvOrDefault("MYSQL_PASSWORD", "")
+    database := getEnvOrDefault("MYSQL_DATABASE", "orderation")
+    params := getEnvOrDefault("MYSQL_PARAMS", "parseTime=true&charset=utf8mb4&collation=utf8mb4_unicode_ci")
+
+    return &Config{
+        Host:     host,
+        Port:     port,
+        Username: username,
+        Password: password,
+        Database: database,
+        Params:   params,
+    }
+}
+
+func parseFromDSN(dsn string) *Config {
+    config := &Config{
+        Host:     "localhost",
+        Port:     3306,
+        Username: "root",
+        Database: "orderation",
+        Params:   "parseTime=true&charset=utf8mb4&collation=utf8mb4_unicode_ci",
+    }
+
+    parts := strings.Split(dsn, "@tcp(")
+    if len(parts) >= 2 {
+        userPart := parts[0]
+        if strings.Contains(userPart, ":") {
+            userPassParts := strings.Split(userPart, ":")
+            config.Username = userPassParts[0]
+            if len(userPassParts) > 1 {
+                config.Password = userPassParts[1]
+            }
+        } else {
+            config.Username = userPart
+        }
+
+        remaining := parts[1]
+        hostDbParts := strings.Split(remaining, ")/")
+        if len(hostDbParts) >= 2 {
+            hostPort := hostDbParts[0]
+            if strings.Contains(hostPort, ":") {
+                hostPortParts := strings.Split(hostPort, ":")
+                config.Host = hostPortParts[0]
+                if port, err := strconv.Atoi(hostPortParts[1]); err == nil {
+                    config.Port = port
+                }
+            } else {
+                config.Host = hostPort
+            }
+
+            dbParams := hostDbParts[1]
+            if strings.Contains(dbParams, "?") {
+                dbParamsParts := strings.Split(dbParams, "?")
+                config.Database = dbParamsParts[0]
+                if len(dbParamsParts) > 1 {
+                    config.Params = dbParamsParts[1]
+                }
+            } else {
+                config.Database = dbParams
+            }
+        }
+    }
+
+    return config
+}
+
+func (c *Config) ToDSN() string {
+    return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?%s",
+        c.Username, c.Password, c.Host, c.Port, c.Database, c.Params)
+}
+
+func getEnvOrDefault(key, defaultValue string) string {
+    if value := os.Getenv(key); value != "" {
+        return value
+    }
+    return defaultValue
+}
 
 func Open(dsn string) (*sql.DB, error) {
     db, err := sql.Open("mysql", dsn)
     if err != nil { return nil, err }
     if err := db.Ping(); err != nil { return nil, err }
     return db, nil
+}
+
+func OpenWithConfig(config *Config) (*sql.DB, error) {
+    return Open(config.ToDSN())
 }
 
 // EnsureSchema creates tables if not exist.

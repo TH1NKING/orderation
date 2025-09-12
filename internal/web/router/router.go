@@ -38,6 +38,17 @@ func (r *Router) Handle(method, pattern string, handler http.Handler) {
 }
 
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+    // Set CORS headers for all requests
+    w.Header().Set("Access-Control-Allow-Origin", "*")
+    w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+    w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+    
+    // Handle preflight requests
+    if req.Method == "OPTIONS" {
+        w.WriteHeader(http.StatusOK)
+        return
+    }
+    
     path := req.URL.Path
     for _, rt := range r.routes {
         if req.Method != rt.method {

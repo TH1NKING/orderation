@@ -9,10 +9,18 @@ import (
     "syscall"
     "time"
 
+    "github.com/joho/godotenv"
     "orderation/internal/server"
 )
 
 func main() {
+    // Load .env file if it exists
+    if err := godotenv.Load(); err != nil {
+        log.Println("[info] no .env file found, using system environment variables")
+    } else {
+        log.Println("[info] loaded configuration from .env file")
+    }
+
     addr := getEnv("ADDR", ":8080")
 
     srv := server.New()

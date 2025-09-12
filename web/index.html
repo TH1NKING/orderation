@@ -1,59 +1,213 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Orderation Demo Frontend</title>
-  <style>
-    body { font-family: sans-serif; }
-    section { margin-bottom: 2rem; }
-    pre { background: #f0f0f0; padding: 0.5rem; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orderation - Restaurant Reservation System</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1, h2, h3 { margin-bottom: 15px; color: #333; }
+        .section { margin-bottom: 30px; padding: 20px; border: 1px solid #ddd; }
+        .hidden { display: none; }
+        form { margin-bottom: 20px; }
+        input, textarea, button, select { 
+            padding: 8px; margin: 5px; border: 1px solid #ccc; 
+            font-size: 14px; 
+        }
+        button { 
+            background: #007bff; color: white; cursor: pointer; 
+            border: none; padding: 10px 15px; 
+        }
+        button:hover { background: #0056b3; }
+        button.delete { background: #dc3545; }
+        button.delete:hover { background: #c82333; }
+        .result { 
+            background: #f8f9fa; border: 1px solid #e9ecef; 
+            padding: 10px; margin: 10px 0; white-space: pre-wrap; 
+            font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto;
+        }
+        .error { background: #f8d7da; border-color: #f5c6cb; color: #721c24; }
+        .success { background: #d4edda; border-color: #c3e6cb; color: #155724; }
+        .item { 
+            border: 1px solid #eee; padding: 10px; margin: 5px 0; 
+            background: #fafafa; 
+        }
+        .item h4 { margin-bottom: 5px; color: #555; }
+        .item p { margin: 2px 0; font-size: 14px; }
+        .login-info { 
+            background: #e7f3ff; padding: 10px; margin: 10px 0; 
+            border-left: 4px solid #007bff; 
+        }
+        .tab-buttons { margin-bottom: 20px; }
+        .tab-button { 
+            background: #f8f9fa; color: #333; margin-right: 5px; 
+            border: 1px solid #ddd; 
+        }
+        .tab-button.active { background: #007bff; color: white; }
+        .form-row { display: flex; gap: 10px; margin-bottom: 10px; }
+        .form-row input, .form-row select { flex: 1; }
+
+    </style>
 </head>
 <body>
-  <h1>Orderation Demo Frontend</h1>
+    <div class="container">
+        <h1>🍽️ Orderation - Restaurant Reservation System</h1>
+        
+        <!-- Login Status -->
+        <div id="loginStatus" class="login-info hidden">
+            <strong>已登录:</strong> <span id="currentUser"></span> (<span id="currentRole"></span>)
+            <button onclick="logout()">登出</button>
+        </div>
 
-  <section>
-    <h2>Register</h2>
-    <form id="register-form">
-      <input name="name" placeholder="Name" required />
-      <input name="email" type="email" placeholder="Email" required />
-      <input name="password" type="password" placeholder="Password" required />
-      <button type="submit">Register</button>
-    </form>
-    <pre id="register-result"></pre>
-  </section>
+        <!-- Auth Section -->
+        <div class="section" id="authSection">
+            <div class="tab-buttons">
+                <button class="tab-button active" onclick="showTab('login')">登录</button>
+                <button class="tab-button" onclick="showTab('register')">注册</button>
+            </div>
 
-  <section>
-    <h2>Login</h2>
-    <form id="login-form">
-      <input name="email" type="email" placeholder="Email" required />
-      <input name="password" type="password" placeholder="Password" required />
-      <button type="submit">Login</button>
-    </form>
-    <pre id="login-result"></pre>
-  </section>
+            <div id="loginTab">
+                <h2>🔐 用户登录</h2>
+                <form onsubmit="login(event)">
+                    <div class="form-row">
+                        <input name="email" type="email" placeholder="邮箱" required>
+                        <input name="password" type="password" placeholder="密码" required>
+                        <button type="submit">登录</button>
+                    </div>
+                </form>
+            </div>
 
-  <section id="app" style="display:none;">
-    <h2>Restaurants</h2>
-    <button id="load-restaurants">Load Restaurants</button>
-    <ul id="restaurants"></ul>
+            <div id="registerTab" class="hidden">
+                <h2>📝 用户注册</h2>
+                <form onsubmit="register(event)">
+                    <div class="form-row">
+                        <input name="name" placeholder="姓名" required>
+                        <input name="email" type="email" placeholder="邮箱" required>
+                        <input name="password" type="password" placeholder="密码" required>
+                        <button type="submit">注册</button>
+                    </div>
+                </form>
+            </div>
+            <div class="result" id="authResult"></div>
+        </div>
 
-    <h3>My Reservations</h3>
-    <button id="load-reservations">Load My Reservations</button>
-    <ul id="reservations"></ul>
+        <!-- Main App (hidden until login) -->
+        <div id="mainApp" class="hidden">
+            
+            <!-- Restaurants Section -->
+            <div class="section">
+                <h2>🏪 餐厅管理</h2>
+                
+                <div class="tab-buttons">
+                    <button class="tab-button active" onclick="showRestaurantTab('list')">浏览餐厅</button>
+                    <button class="tab-button" id="createRestaurantTab" onclick="showRestaurantTab('create')" style="display:none;">创建餐厅</button>
+                </div>
 
-    <h3>Create Reservation</h3>
-    <form id="reserve-form">
-      <input name="restaurantId" placeholder="Restaurant ID" required />
-      <input name="start" type="datetime-local" required />
-      <input name="end" type="datetime-local" required />
-      <input name="guests" type="number" min="1" value="1" required />
-      <input name="tableId" placeholder="Table ID (optional)" />
-      <button type="submit">Reserve</button>
-    </form>
-    <pre id="reserve-result"></pre>
-  </section>
+                <div id="restaurantListTab">
+                    <button onclick="loadRestaurants()">🔄 刷新餐厅列表</button>
+                    <div id="restaurantsList"></div>
+                </div>
 
-  <script src="main.js"></script>
+                <div id="restaurantCreateTab" class="hidden">
+                    <h3>创建新餐厅</h3>
+                    <form onsubmit="createRestaurant(event)">
+                        <div class="form-row">
+                            <input name="name" placeholder="餐厅名称" required>
+                            <input name="address" placeholder="餐厅地址" required>
+                        </div>
+                        <div class="form-row">
+                            <input name="openTime" placeholder="营业开始时间 (例: 09:00)" required>
+                            <input name="closeTime" placeholder="营业结束时间 (例: 22:00)" required>
+                            <button type="submit">创建餐厅</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="result" id="restaurantResult"></div>
+            </div>
+
+            <!-- Tables Section -->
+            <div class="section">
+                <h2>🪑 桌台管理</h2>
+                <div class="form-row">
+                    <input id="tableRestaurantId" placeholder="餐厅ID" required>
+                    <button onclick="loadTables()">📋 查看桌台</button>
+                    <button id="createTableBtn" onclick="showCreateTable()" style="display:none;">➕ 添加桌台</button>
+                </div>
+
+                <div id="createTableForm" class="hidden">
+                    <h3>添加新桌台</h3>
+                    <form onsubmit="createTable(event)">
+                        <div class="form-row">
+                            <input name="name" placeholder="桌台名称 (例: A1)" required>
+                            <input name="capacity" type="number" placeholder="座位数" min="1" required>
+                            <button type="submit">创建桌台</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div id="tablesList"></div>
+                <div class="result" id="tablesResult"></div>
+            </div>
+
+            <!-- Availability Check -->
+            <div class="section" id="availabilitySection">
+                <h2>🔍 查看可用性</h2>
+                <form onsubmit="checkAvailability(event)">
+                    <div class="form-row">
+                        <input name="restaurantId" placeholder="餐厅ID" required>
+                        <input name="startTime" type="datetime-local" required>
+                        <input name="endTime" type="datetime-local" required>
+                    </div>
+                    <div class="form-row">
+                        <input name="guests" type="number" placeholder="就餐人数" min="1" required>
+                        <button type="submit">🔍 查看可用桌台</button>
+                    </div>
+                </form>
+                <div id="availabilityList"></div>
+                <div class="result" id="availabilityResult"></div>
+            </div>
+
+            <!-- Reservations Section -->
+            <div class="section">
+                <h2>📅 预订管理</h2>
+                
+                <div class="tab-buttons">
+                    <button class="tab-button active" onclick="showReservationTab('create')">创建预订</button>
+                    <button class="tab-button" onclick="showReservationTab('mine')">我的预订</button>
+                </div>
+
+                <div id="reservationCreateTab">
+                    <h3>创建新预订</h3>
+                    <form onsubmit="createReservation(event)">
+                        <div class="form-row">
+                            <input name="restaurantId" placeholder="餐厅ID" required>
+                            <input name="tableId" placeholder="桌台ID (可选)">
+                        </div>
+                        <div class="form-row">
+                            <input name="startTime" type="datetime-local" required>
+                            <input name="endTime" type="datetime-local" required>
+                            <input name="guests" type="number" placeholder="就餐人数" min="1" required>
+                        </div>
+                        <button type="submit">📝 创建预订</button>
+                    </form>
+                </div>
+
+                <div id="reservationMineTab" class="hidden">
+                    <button onclick="loadMyReservations()">🔄 刷新我的预订</button>
+                    <div id="myReservationsList"></div>
+                </div>
+
+                <div class="result" id="reservationResult"></div>
+            </div>
+
+        </div>
+
+        <!-- Global Results -->
+        <div class="result" id="globalResult"></div>
+    </div>
+
+    <script src="app.js"></script>
 </body>
 </html>

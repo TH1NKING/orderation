@@ -16,6 +16,7 @@ type RestaurantStore interface {
     Create(r *models.Restaurant) error
     List() ([]*models.Restaurant, error)
     ByID(id string) (*models.Restaurant, error)
+    Delete(id string) error
 }
 
 type TableStore interface {
