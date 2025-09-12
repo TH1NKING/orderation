@@ -5,55 +5,354 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Orderation - Restaurant Reservation System</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; }
-        .container { max-width: 1200px; margin: 0 auto; }
-        h1, h2, h3 { margin-bottom: 15px; color: #333; }
-        .section { margin-bottom: 30px; padding: 20px; border: 1px solid #ddd; }
-        .hidden { display: none; }
-        form { margin-bottom: 20px; }
-        input, textarea, button, select { 
-            padding: 8px; margin: 5px; border: 1px solid #ccc; 
-            font-size: 14px; 
+        :root {
+            --primary-color: #ff6b6b;
+            --secondary-color: #4ecdc4;
+            --accent-color: #45b7d1;
+            --success-color: #96ceb4;
+            --warning-color: #feca57;
+            --error-color: #ff6b6b;
+            --text-dark: #2c3e50;
+            --text-light: #7f8c8d;
+            --bg-light: #f8f9fa;
+            --bg-white: #ffffff;
+            --shadow: 0 2px 10px rgba(0,0,0,0.1);
+            --shadow-hover: 0 4px 20px rgba(0,0,0,0.15);
+            --border-radius: 12px;
+            --transition: all 0.3s ease;
         }
-        button { 
-            background: #007bff; color: white; cursor: pointer; 
-            border: none; padding: 10px 15px; 
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        button:hover { background: #0056b3; }
-        button.delete { background: #dc3545; }
-        button.delete:hover { background: #c82333; }
-        .result { 
-            background: #f8f9fa; border: 1px solid #e9ecef; 
-            padding: 10px; margin: 10px 0; white-space: pre-wrap; 
-            font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto;
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
         }
-        .error { background: #f8d7da; border-color: #f5c6cb; color: #721c24; }
-        .success { background: #d4edda; border-color: #c3e6cb; color: #155724; }
-        .item { 
-            border: 1px solid #eee; padding: 10px; margin: 5px 0; 
-            background: #fafafa; 
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
         }
-        .item h4 { margin-bottom: 5px; color: #555; }
-        .item p { margin: 2px 0; font-size: 14px; }
-        .login-info { 
-            background: #e7f3ff; padding: 10px; margin: 10px 0; 
-            border-left: 4px solid #007bff; 
+
+        h1 {
+            text-align: center;
+            color: white;
+            font-size: 2.5rem;
+            margin-bottom: 30px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
-        .tab-buttons { margin-bottom: 20px; }
-        .tab-button { 
-            background: #f8f9fa; color: #333; margin-right: 5px; 
-            border: 1px solid #ddd; 
+
+        h2 {
+            color: var(--text-dark);
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
-        .tab-button.active { background: #007bff; color: white; }
-        .form-row { display: flex; gap: 10px; margin-bottom: 10px; }
-        .form-row input, .form-row select { flex: 1; }
+
+        h3 {
+            color: var(--text-dark);
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .section {
+            background: var(--bg-white);
+            margin-bottom: 30px;
+            padding: 30px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+        }
+
+        .section:hover {
+            box-shadow: var(--shadow-hover);
+            transform: translateY(-2px);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* Form Styles */
+        form {
+            margin-bottom: 20px;
+        }
+
+        input, select, textarea {
+            padding: 12px 16px;
+            margin: 5px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: var(--transition);
+            background: var(--bg-white);
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.1);
+        }
+
+        /* Button Styles */
+        button {
+            padding: 12px 24px;
+            margin: 5px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            background: linear-gradient(135deg, var(--primary-color), #ff5252);
+            color: white;
+            box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.delete {
+            background: linear-gradient(135deg, var(--error-color), #dc3545);
+        }
+
+        button.secondary {
+            background: linear-gradient(135deg, var(--secondary-color), #26d0ce);
+        }
+
+        button.accent {
+            background: linear-gradient(135deg, var(--accent-color), #3498db);
+        }
+
+        /* Tab Buttons */
+        .tab-buttons {
+            display: flex;
+            margin-bottom: 20px;
+            background: #f1f3f4;
+            border-radius: 8px;
+            padding: 4px;
+        }
+
+        .tab-button {
+            flex: 1;
+            background: transparent;
+            color: var(--text-light);
+            border: none;
+            padding: 12px 20px;
+            margin: 0;
+            border-radius: 6px;
+            font-weight: 500;
+            box-shadow: none;
+        }
+
+        .tab-button.active {
+            background: white;
+            color: var(--text-dark);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .tab-button:hover:not(.active) {
+            background: rgba(255,255,255,0.5);
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Form Rows */
+        .form-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .form-row input,
+        .form-row select {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .form-row button {
+            flex-shrink: 0;
+        }
+
+        /* Results */
+        .result {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+            font-size: 14px;
+            border-left: 4px solid #ddd;
+            background: var(--bg-light);
+        }
+
+        .result.error {
+            background: #fff5f5;
+            border-left-color: var(--error-color);
+            color: #c53030;
+        }
+
+        .result.success {
+            background: #f0fff4;
+            border-left-color: var(--success-color);
+            color: #2d7d32;
+        }
+
+        /* Items */
+        .item {
+            background: var(--bg-white);
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+            transition: var(--transition);
+        }
+
+        .item:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transform: translateY(-1px);
+        }
+
+        .item h4 {
+            color: var(--text-dark);
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+
+        .item p {
+            color: var(--text-light);
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        .item strong {
+            color: var(--text-dark);
+        }
+
+        /* Login Status */
+        .login-info {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow);
+        }
+
+        .login-info button {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 8px 16px;
+            font-size: 12px;
+        }
+
+        .login-info button:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        /* Status badges */
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-confirmed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-cancelled {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .section {
+                padding: 20px;
+            }
+
+            .form-row {
+                flex-direction: column;
+            }
+
+            .form-row input,
+            .form-row select {
+                min-width: unset;
+            }
+
+            .tab-buttons {
+                flex-direction: column;
+            }
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
 
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🍽️ Orderation - Restaurant Reservation System</h1>
+        <h1>🍽️ Orderation</h1>
+        <p style="text-align: center; color: rgba(255,255,255,0.9); font-size: 1.1rem; margin-bottom: 30px;">智能餐厅预订管理系统</p>
         
         <!-- Login Status -->
         <div id="loginStatus" class="login-info hidden">
@@ -106,7 +405,7 @@
                 </div>
 
                 <div id="restaurantListTab">
-                    <button onclick="loadRestaurants()">🔄 刷新餐厅列表</button>
+                    <button class="secondary" onclick="loadRestaurants()">🔄 刷新餐厅列表</button>
                     <div id="restaurantsList"></div>
                 </div>
 
@@ -132,8 +431,8 @@
                 <h2>🪑 桌台管理</h2>
                 <div class="form-row">
                     <input id="tableRestaurantId" placeholder="餐厅ID" required>
-                    <button onclick="loadTables()">📋 查看桌台</button>
-                    <button id="createTableBtn" onclick="showCreateTable()" style="display:none;">➕ 添加桌台</button>
+                    <button class="accent" onclick="loadTables()">📋 查看桌台</button>
+                    <button class="secondary" id="createTableBtn" onclick="showCreateTable()" style="display:none;">➕ 添加桌台</button>
                 </div>
 
                 <div id="createTableForm" class="hidden">
@@ -162,7 +461,7 @@
                     </div>
                     <div class="form-row">
                         <input name="guests" type="number" placeholder="就餐人数" min="1" required>
-                        <button type="submit">🔍 查看可用桌台</button>
+                        <button class="accent" type="submit">🔍 查看可用桌台</button>
                     </div>
                 </form>
                 <div id="availabilityList"></div>
@@ -195,7 +494,7 @@
                 </div>
 
                 <div id="reservationMineTab" class="hidden">
-                    <button onclick="loadMyReservations()">🔄 刷新我的预订</button>
+                    <button class="secondary" onclick="loadMyReservations()">🔄 刷新我的预订</button>
                     <div id="myReservationsList"></div>
                 </div>
 

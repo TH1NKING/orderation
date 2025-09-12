@@ -5,27 +5,32 @@
 ## ✨ 功能特性
 
 ### 🔐 用户系统
+
 - **用户注册和登录** - JWT token 认证
 - **角色权限管理** - 普通用户和管理员权限区分
 - **密码安全** - 使用 bcrypt 加密存储
 
 ### 🏪 餐厅管理
+
 - **餐厅信息管理** - 创建、查看、删除餐厅（管理员功能）
 - **营业时间设置** - 支持自定义营业时间
 - **餐厅列表浏览** - 所有用户可查看餐厅信息
 
 ### 🪑 桌台管理
+
 - **桌台信息管理** - 创建桌台，设置容量（管理员功能）
 - **桌台状态查看** - 实时显示桌台占用状态
 - **按餐厅分组** - 每个餐厅独立管理桌台
 
 ### 📅 预订系统
+
 - **智能预订** - 自动匹配最适合的桌台
 - **时间验证** - 确保预订时间在营业时间内
 - **冲突检测** - 防止重复预订同一桌台
 - **预订管理** - 用户可查看、取消自己的预订
 
 ### 🔍 可用性查询
+
 - **实时查询** - 查询指定时间段的可用桌台
 - **智能推荐** - 根据人数推荐合适容量的桌台
 - **快速预订** - 直接从可用性查询结果快速预订
@@ -33,12 +38,14 @@
 ## 🏗️ 技术架构
 
 ### 后端（Go）
+
 - **框架**: 原生 `net/http` + 自定义路由器
 - **数据库**: MySQL（主要）+ 内存存储（fallback）
 - **认证**: JWT + bcrypt 密码哈希
 - **架构模式**: 分层架构（Handler → Service → Store）
 
 ### 前端
+
 - **技术栈**: 原生 HTML + CSS + JavaScript
 - **样式**: 响应式设计，支持移动端
 - **交互**: 基于 fetch API 的异步请求
@@ -47,6 +54,7 @@
 ## 🚀 快速开始
 
 ### 环境要求
+
 - Go 1.22.0+
 - MySQL 5.7+ （可选）
 - 现代浏览器
@@ -66,6 +74,7 @@ go run cmd/server/main.go
 ```
 
 ### 环境变量配置
+
 - `ADDR`：监听地址，默认 `:8080`
 - `SECRET`：JWT 签名密钥，默认随机生成
 - `ADMIN_EMAIL`、`ADMIN_PASSWORD`、`ADMIN_NAME`：启动时自动创建管理员账号
@@ -74,6 +83,7 @@ go run cmd/server/main.go
 ### 方式二：使用 Docker（推荐）
 
 项目提供 `docker-compose.yml` 配置，包含：
+
 - MySQL 8.0 数据库（持久化存储）
 - 应用容器（自动建表）
 
@@ -89,6 +99,7 @@ open http://localhost:8080
 ```
 
 停止服务：
+
 ```bash
 docker-compose down
 
@@ -115,6 +126,7 @@ go run check_users.go
 ### 默认管理员账户
 
 系统已创建测试管理员账户：
+
 - **邮箱**: `simpleadmin@test.com`
 - **密码**: `123456`
 - **权限**: 创建/删除餐厅、创建桌台
@@ -150,12 +162,14 @@ orderation/
 所有请求与响应均为 JSON 格式。认证采用 JWT Bearer Token。
 
 ### 认证接口
+
 ```http
 POST /api/v1/auth/register  # 用户注册
 POST /api/v1/auth/login     # 用户登录
 ```
 
 ### 餐厅接口
+
 ```http
 GET    /api/v1/restaurants           # 获取餐厅列表
 GET    /api/v1/restaurants/:id       # 获取餐厅详情  
@@ -165,12 +179,14 @@ DELETE /api/v1/restaurants/:id       # 删除餐厅（管理员）
 ```
 
 ### 桌台接口
+
 ```http
 GET  /api/v1/restaurants/:id/tables  # 获取餐厅桌台列表
 POST /api/v1/restaurants/:id/tables  # 创建桌台（管理员）
 ```
 
 ### 预订接口
+
 ```http
 POST   /api/v1/restaurants/:id/availability  # 查询可用桌台
 POST   /api/v1/restaurants/:id/reservations   # 创建预订（需登录）
@@ -181,6 +197,7 @@ DELETE /api/v1/reservations/:id             # 取消预订（需登录）
 ### 请求示例
 
 #### 用户注册
+
 ```json
 POST /api/v1/auth/register
 {
@@ -191,6 +208,7 @@ POST /api/v1/auth/register
 ```
 
 #### 创建餐厅（管理员）
+
 ```json
 POST /api/v1/restaurants
 Authorization: Bearer <admin-token>
@@ -203,6 +221,7 @@ Authorization: Bearer <admin-token>
 ```
 
 #### 查询可用桌台
+
 ```json
 POST /api/v1/restaurants/:id/availability
 {
@@ -224,16 +243,19 @@ POST /api/v1/restaurants/:id/availability
 ## 🔍 业务逻辑亮点
 
 ### 智能桌台分配
+
 - 优先分配容量最接近需求的桌台
 - 避免大桌台被小团体占用
 - 自动处理容量冲突
 
 ### 营业时间验证
+
 - 支持跨时区时间处理（Asia/Shanghai）
 - 精确到分钟的营业时间控制
 - 防止非营业时间预订
 
 ### 冲突检测
+
 - 实时检测时间段重叠
 - 支持复杂的预订时间验证
 - 确保数据一致性
@@ -256,6 +278,7 @@ go run debug_hours.go
 ## 📊 数据模型
 
 ### User（用户）
+
 ```json
 {
   "id": "uuid",
@@ -267,6 +290,7 @@ go run debug_hours.go
 ```
 
 ### Restaurant（餐厅）
+
 ```json
 {
   "id": "uuid",
@@ -279,6 +303,7 @@ go run debug_hours.go
 ```
 
 ### Table（桌台）
+
 ```json
 {
   "id": "uuid",
@@ -290,6 +315,7 @@ go run debug_hours.go
 ```
 
 ### Reservation（预订）
+
 ```json
 {
   "id": "uuid",
@@ -343,6 +369,7 @@ A: 确认使用管理员账户登录（`simpleadmin@test.com` / `123456`）
 5. 开启 Pull Request
 
 ### 开发规范
+
 - 遵循 Go 语言标准代码规范
 - 添加必要的单元测试
 - 更新相关文档
@@ -355,15 +382,16 @@ A: 确认使用管理员账户登录（`simpleadmin@test.com` / `123456`）
 ## 📞 支持与反馈
 
 如有问题或建议，欢迎：
+
 - 提交 [Issue](../../issues)
 - 发起 [Pull Request](../../pulls)
-- 发送邮件咨询
 
 ---
 
 ⭐ 如果这个项目对你有帮助，请给它一个 Star！
 
 💡 **快速体验流程**：
+
 1. 启动服务：`docker-compose up -d`
 2. 访问页面：`http://localhost:8080`
 3. 管理员登录：`simpleadmin@test.com` / `123456`
