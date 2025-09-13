@@ -72,6 +72,9 @@ func New() *Server {
     th := h.NewTableHandler(restaurantStore, tableStore)
     resvh := h.NewReservationHandler(reservationStore, restaurantStore, tableStore, userStore)
 
+    // Static files first, before router
+    mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./web/"))))
+    
     r := router.New(mux)
 
     // Health
@@ -79,6 +82,15 @@ func New() *Server {
         w.Header().Set("Content-Type", "application/json")
         w.WriteHeader(http.StatusOK)
         w.Write([]byte(`{"ok":true}`))
+    }))
+
+    // Serve main page on root
+    r.Handle("GET", "/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        if r.URL.Path == "/" {
+            http.ServeFile(w, r, "./web/index.html")
+        } else {
+            http.NotFound(w, r)
+        }
     }))
 
     // Auth

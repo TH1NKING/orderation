@@ -38,7 +38,14 @@ async function apiCall(url, options = {}) {
             headers
         });
         
-        const data = await response.json().catch(() => ({}));
+        // Handle different response types
+        let data = {};
+        if (response.status !== 204) { // 204 No Content has no body
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                data = await response.json().catch(() => ({}));
+            }
+        }
         
         if (!response.ok) {
             throw new Error(data.error || `HTTP ${response.status}: ${response.statusText}`);
@@ -333,92 +340,6 @@ async function createTable(event) {
     }
 }
 
-// Availability functions
-async function checkAvailability(event) {
-    event.preventDefault();
-    const formData = new FormData(event.target);
-    const data = Object.fromEntries(formData);
-    data.guests = parseInt(data.guests);
-    
-    try {
-        clearResult('availabilityResult');
-        const result = await apiCall(`/restaurants/${data.restaurantId}/availability`, {
-            method: 'POST',
-            body: JSON.stringify({
-                start: new Date(data.startTime).toISOString(),
-                end: new Date(data.endTime).toISOString(),
-                guests: data.guests
-            })
-        });
-        
-        const container = document.getElementById('availabilityList');
-        if (!result || result.length === 0) {
-            container.innerHTML = '<p>❌ 该时间段无可用桌台</p>';
-            showResult('availabilityResult', '无可用桌台');
-            return;
-        }
-        
-        container.innerHTML = `
-            <p>✅ 找到 ${result.length} 个可用桌台：</p>
-            ${result.map(table => `
-                <div class="item">
-                    <h4>🪑 桌台 ${table.tableId}</h4>
-                    <p><strong>ID:</strong> ${table.tableId}</p>
-                    <p><strong>容量:</strong> ${table.capacity} 人</p>
-                    <button onclick="quickReserve('${data.restaurantId}', '${table.tableId}', '${data.startTime}', '${data.endTime}', ${data.guests})">快速预订</button>
-                </div>
-            `).join('')}
-        `;
-        
-        showResult('availabilityResult', `找到 ${result.length} 个可用桌台`);
-    } catch (error) {
-        showResult('availabilityResult', `查询可用性失败: ${error.message}`, true);
-    }
-}
-
-async function quickReserve(restaurantId, tableId, startTime, endTime, guests) {
-    try {
-        // Clear any existing results
-        clearResult('reservationResult');
-        
-        // Create reservation directly
-        const result = await apiCall(`/restaurants/${restaurantId}/reservations`, {
-            method: 'POST',
-            body: JSON.stringify({
-                tableId: tableId,
-                start: new Date(startTime).toISOString(),
-                end: new Date(endTime).toISOString(),
-                guests: parseInt(guests)
-            })
-        });
-        
-        // Show success message
-        showResult('reservationResult', `快速预订成功！预订ID: ${result.id}`);
-        
-        // Switch to my reservations tab to show the new reservation
-        showReservationTab('mine');
-        
-        // Scroll to reservation section
-        document.querySelector('#reservationMineTab').scrollIntoView({ behavior: 'smooth' });
-        
-    } catch (error) {
-        showResult('reservationResult', `快速预订失败: ${error.message}`, true);
-        
-        // Fall back to filling the form if direct reservation fails
-        const form = document.querySelector('#reservationCreateTab form');
-        form.elements.restaurantId.value = restaurantId;
-        form.elements.tableId.value = tableId;
-        form.elements.startTime.value = startTime;
-        form.elements.endTime.value = endTime;
-        form.elements.guests.value = guests;
-        
-        // Switch to reservation tab
-        showReservationTab('create');
-        
-        // Scroll to reservation section
-        document.querySelector('#reservationCreateTab').scrollIntoView({ behavior: 'smooth' });
-    }
-}
 
 // Reservation functions
 async function createReservation(event) {

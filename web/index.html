@@ -450,24 +450,6 @@
                 <div class="result" id="tablesResult"></div>
             </div>
 
-            <!-- Availability Check -->
-            <div class="section" id="availabilitySection">
-                <h2>🔍 查看可用性</h2>
-                <form onsubmit="checkAvailability(event)">
-                    <div class="form-row">
-                        <input name="restaurantId" placeholder="餐厅ID" required>
-                        <input name="startTime" type="datetime-local" required>
-                        <input name="endTime" type="datetime-local" required>
-                    </div>
-                    <div class="form-row">
-                        <input name="guests" type="number" placeholder="就餐人数" min="1" required>
-                        <button class="accent" type="submit">🔍 查看可用桌台</button>
-                    </div>
-                </form>
-                <div id="availabilityList"></div>
-                <div class="result" id="availabilityResult"></div>
-            </div>
-
             <!-- Reservations Section -->
             <div class="section">
                 <h2>📅 预订管理</h2>

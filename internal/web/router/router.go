@@ -87,6 +87,11 @@ func parsePattern(pattern string) []segment {
 }
 
 func match(segs []segment, path string) (map[string]string, bool) {
+    // Handle root path case
+    if path == "/" && len(segs) == 0 {
+        return map[string]string{}, true
+    }
+    
     parts := strings.Split(strings.TrimPrefix(path, "/"), "/")
     // Remove empty from trailing slashes
     compact := make([]string, 0, len(parts))
